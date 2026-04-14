@@ -59,8 +59,8 @@ export default function LoginPage() {
             <CarProfile size={22} weight="duotone" className="text-surface" />
           </div>
           <div>
-            <p className="font-display font-bold text-white text-lg leading-none">Z+ Limo</p>
-            <p className="text-gray-500 text-xs mt-0.5">Fleet Command Center</p>
+              <p className="font-display font-bold text-white text-lg leading-none">zpluslimo</p>
+              <p className="text-gray-500 text-xs mt-0.5">Control Room</p>
           </div>
         </div>
 
@@ -69,7 +69,7 @@ export default function LoginPage() {
           <div className="mb-6">
             <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold/10 border border-gold/20 text-gold text-xs font-semibold">
               <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse-slow" />
-              Premium Fleet Management
+              Control Room
             </span>
           </div>
           <h1 className="font-display font-bold text-5xl text-white leading-[1.12] mb-6">
@@ -100,7 +100,7 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="relative z-10">
           <p className="text-gray-600 text-xs">
-            © 2026 Z+ Limo LLC — Dubai, UAE. All rights reserved.
+            © 2026 zpluslimo LLC — Dubai, UAE. All rights reserved.
           </p>
         </div>
       </div>
@@ -118,8 +118,8 @@ export default function LoginPage() {
               <CarProfile size={18} weight="duotone" className="text-surface" />
             </div>
             <div>
-              <p className="font-display font-bold text-white text-base leading-none">Z+ Limo</p>
-              <p className="text-gray-500 text-[11px]">Fleet Command Center</p>
+              <p className="font-display font-bold text-white text-base leading-none">zpluslimo</p>
+              <p className="text-gray-500 text-[11px]">Control Room</p>
             </div>
           </div>
 
@@ -141,7 +141,7 @@ export default function LoginPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="admin@zpluslimo.com"
+                    placeholder="tech@zpluslimo.com"
                     required
                     className="input-field pl-10"
                   />
@@ -224,7 +224,7 @@ export default function LoginPage() {
             <div className="mt-8 pt-6 border-t border-surface-border">
               <p className="text-center text-xs text-gray-500">
                 Need access?{' '}
-                <a href="mailto:it@zpluslimo.com" className="text-gold hover:text-gold-light transition-colors">
+                <a href="mailto:it@zpluslimo.ae" className="text-gold hover:text-gold-light transition-colors">
                   Contact IT Support
                 </a>
               </p>

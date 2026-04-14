@@ -9,8 +9,8 @@ export const theme = {
     surfaceBorder: '#282e42',
   },
   company: {
-    name: 'Z+ Limo',
-    tagline: 'Premium Fleet Management',
+    name: 'zpluslimo',
+    tagline: 'Control Room',
     shortName: 'ZPL',
   },
 } as const;

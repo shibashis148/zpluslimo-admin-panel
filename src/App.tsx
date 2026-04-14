@@ -4,25 +4,24 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import IntegrationsPage from './pages/IntegrationsPage';
 import ComingSoonPage from './pages/ComingSoonPage';
 
 const COMING_SOON_ROUTES = [
   '/analytics',
-  '/vehicles',
-  '/bookings',
-  '/tracking',
-  '/dispatch',
   '/drivers',
-  '/clients',
-  '/staff',
-  '/finance',
-  '/maintenance',
+  '/cars',
+  '/users',
+  '/tracking',
+  '/shift',
   '/reports',
-  '/messages',
+  '/reports/trips',
+  '/reports/drivers',
+  '/reports/finance',
+  '/reports/fines',
+  '/reports/incentive',
+  '/reports/expenses',
   '/notifications',
-  '/compliance',
-  '/activity',
-  '/company',
   '/settings',
 ];
 
@@ -38,6 +37,7 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/integrations" element={<IntegrationsPage />} />
 
               {COMING_SOON_ROUTES.map((path) => (
                 <Route key={path} path={path} element={<ComingSoonPage />} />

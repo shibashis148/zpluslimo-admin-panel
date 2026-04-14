@@ -24,14 +24,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return stored ? JSON.parse(stored) : null;
   });
 
+  const VALID_CREDENTIALS = [
+    { email: 'tech@zpluslimo.com', password: '123456', name: 'Tech Admin', role: 'Super Admin' },
+    { email: 'admin@zpluslimo.ae', password: 'admin123', name: 'Admin User', role: 'Admin' },
+  ];
+
   const login = async (email: string, password: string): Promise<boolean> => {
     await new Promise((r) => setTimeout(r, 1200));
-    if (email && password.length >= 4) {
+    const match = VALID_CREDENTIALS.find(
+      (c) => c.email.toLowerCase() === email.toLowerCase() && c.password === password
+    );
+    if (match) {
       const u: User = {
         id: '1',
-        name: 'Admin User',
-        email,
-        role: 'Super Admin',
+        name: match.name,
+        email: match.email,
+        role: match.role,
       };
       setUser(u);
       localStorage.setItem('zpl_user', JSON.stringify(u));

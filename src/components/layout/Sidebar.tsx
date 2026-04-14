@@ -3,25 +3,25 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   CarProfile,
   ChartBarHorizontal,
-  Taxi,
   Users,
-  CalendarBlank,
   MapPin,
-  CurrencyDollar,
-  Wrench,
+  ClockCountdown,
   FileText,
   Bell,
   GearSix,
   SignOut,
   CaretRight,
+  CaretDown,
   X,
-  Buildings,
-  UserCircleGear,
   IdentificationCard,
   ChartLineUp,
-  ChatCircleDots,
-  ShieldCheck,
-  ListBullets,
+  Plugs,
+  BookOpen,
+  ChartBar,
+  CurrencyDollar,
+  Warning,
+  Gift,
+  Receipt,
 } from '@phosphor-icons/react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -31,6 +31,7 @@ interface NavItem {
   path: string;
   badge?: string | number;
   badgeColor?: string;
+  children?: Omit<NavItem, 'children'>[];
 }
 
 interface NavSection {
@@ -49,36 +50,36 @@ const NAV: NavSection[] = [
   {
     title: 'Fleet',
     items: [
-      { label: 'Vehicles', icon: CarProfile, path: '/vehicles', badge: 'New' },
-      { label: 'Bookings', icon: CalendarBlank, path: '/bookings', badge: 12, badgeColor: 'gold' },
-      { label: 'Live Tracking', icon: MapPin, path: '/tracking' },
-      { label: 'Dispatch', icon: Taxi, path: '/dispatch' },
-    ],
-  },
-  {
-    title: 'People',
-    items: [
       { label: 'Drivers', icon: IdentificationCard, path: '/drivers' },
-      { label: 'Clients', icon: Users, path: '/clients' },
-      { label: 'Staff', icon: UserCircleGear, path: '/staff' },
+      { label: 'Cars', icon: CarProfile, path: '/cars', badge: 'New' },
+      { label: 'Users', icon: Users, path: '/users' },
+      { label: 'Live Track', icon: MapPin, path: '/tracking' },
+      { label: 'Shift', icon: ClockCountdown, path: '/shift' },
     ],
   },
   {
-    title: 'Operations',
+    title: 'Reports',
     items: [
-      { label: 'Finance', icon: CurrencyDollar, path: '/finance' },
-      { label: 'Maintenance', icon: Wrench, path: '/maintenance', badge: 3, badgeColor: 'red' },
-      { label: 'Reports', icon: FileText, path: '/reports' },
-      { label: 'Messages', icon: ChatCircleDots, path: '/messages', badge: 5, badgeColor: 'brand' },
+      {
+        label: 'Reports',
+        icon: FileText,
+        path: '/reports',
+        children: [
+          { label: 'Trip Reports',       icon: BookOpen,        path: '/reports/trips' },
+          { label: 'Driver Reports',     icon: ChartBar,        path: '/reports/drivers' },
+          { label: 'Finance Reports',    icon: CurrencyDollar,  path: '/reports/finance' },
+          { label: 'Fine Reports',       icon: Warning,         path: '/reports/fines' },
+          { label: 'Incentive Reports',  icon: Gift,            path: '/reports/incentive' },
+          { label: 'Driver Expenses',    icon: Receipt,         path: '/reports/expenses' },
+        ],
+      },
     ],
   },
   {
     title: 'System',
     items: [
+      { label: 'Integrations', icon: Plugs, path: '/integrations', badge: 'New', badgeColor: 'gold' },
       { label: 'Notifications', icon: Bell, path: '/notifications', badge: 8, badgeColor: 'brand' },
-      { label: 'Compliance', icon: ShieldCheck, path: '/compliance' },
-      { label: 'Activity Log', icon: ListBullets, path: '/activity' },
-      { label: 'Company', icon: Buildings, path: '/company' },
       { label: 'Settings', icon: GearSix, path: '/settings' },
     ],
   },
@@ -93,6 +94,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<string[]>(['/reports']);
 
   const badgeClass = (color?: string) => {
     if (color === 'gold') return 'bg-gold/20 text-gold';
@@ -103,6 +105,12 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
   const isActive = (path: string) =>
     location.pathname === path || (path !== '/dashboard' && location.pathname.startsWith(path));
+
+  const toggleExpand = (path: string) => {
+    setExpandedItems((prev) =>
+      prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path]
+    );
+  };
 
   return (
     <>
@@ -133,8 +141,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 <CarProfile size={16} weight="duotone" className="text-surface" />
               </div>
               <div className="min-w-0">
-                <p className="font-display font-bold text-white text-[15px] leading-none truncate">Z+ Limo</p>
-                <p className="text-gray-500 text-[10px] mt-0.5 truncate">Fleet Command</p>
+                <p className="font-display font-bold text-white text-[15px] leading-none truncate">zpluslimo</p>
+                <p className="text-gray-500 text-[10px] mt-0.5 truncate">Control Room</p>
               </div>
             </div>
           )}
@@ -169,34 +177,95 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.path);
+                  const hasChildren = item.children && item.children.length > 0;
+                  const isExpanded = expandedItems.includes(item.path);
+
                   return (
                     <li key={item.path}>
-                      <NavLink
-                        to={item.path}
-                        onClick={onClose}
-                        title={collapsed ? item.label : undefined}
-                        className={[
-                          'nav-item',
-                          active ? 'nav-item-active' : '',
-                          collapsed ? 'justify-center px-0' : '',
-                        ].join(' ')}
-                      >
-                        <Icon
-                          size={20}
-                          weight={active ? 'duotone' : 'regular'}
-                          className={`shrink-0 ${active ? 'text-gold' : 'text-gray-500 group-hover:text-gray-300'}`}
-                        />
-                        {!collapsed && (
-                          <>
-                            <span className="flex-1 truncate">{item.label}</span>
-                            {item.badge !== undefined && (
-                              <span className={`badge text-[10px] ${badgeClass(item.badgeColor)}`}>
-                                {item.badge}
-                              </span>
+                      {hasChildren ? (
+                        <>
+                          {/* Expandable parent */}
+                          <button
+                            onClick={() => !collapsed && toggleExpand(item.path)}
+                            className={[
+                              'nav-item w-full text-left',
+                              active ? 'nav-item-active' : '',
+                              collapsed ? 'justify-center px-0' : '',
+                            ].join(' ')}
+                          >
+                            <Icon
+                              size={20}
+                              weight={active ? 'duotone' : 'regular'}
+                              className={`shrink-0 ${active ? 'text-gold' : 'text-gray-500'}`}
+                            />
+                            {!collapsed && (
+                              <>
+                                <span className="flex-1 truncate">{item.label}</span>
+                                <CaretDown
+                                  size={13}
+                                  weight="bold"
+                                  className={`text-gray-500 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                />
+                              </>
                             )}
-                          </>
-                        )}
-                      </NavLink>
+                          </button>
+                          {/* Children */}
+                          {isExpanded && !collapsed && (
+                            <ul className="mt-0.5 ml-3 pl-3 border-l border-surface-border space-y-0.5">
+                              {item.children!.map((child) => {
+                                const ChildIcon = child.icon;
+                                const childActive = location.pathname === child.path;
+                                return (
+                                  <li key={child.path}>
+                                    <NavLink
+                                      to={child.path}
+                                      onClick={onClose}
+                                      className={[
+                                        'nav-item text-xs py-2',
+                                        childActive ? 'nav-item-active' : '',
+                                      ].join(' ')}
+                                    >
+                                      <ChildIcon
+                                        size={15}
+                                        weight={childActive ? 'duotone' : 'regular'}
+                                        className={`shrink-0 ${childActive ? 'text-gold' : 'text-gray-600'}`}
+                                      />
+                                      <span className="flex-1 truncate">{child.label}</span>
+                                    </NavLink>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </>
+                      ) : (
+                        <NavLink
+                          to={item.path}
+                          onClick={onClose}
+                          title={collapsed ? item.label : undefined}
+                          className={[
+                            'nav-item',
+                            active ? 'nav-item-active' : '',
+                            collapsed ? 'justify-center px-0' : '',
+                          ].join(' ')}
+                        >
+                          <Icon
+                            size={20}
+                            weight={active ? 'duotone' : 'regular'}
+                            className={`shrink-0 ${active ? 'text-gold' : 'text-gray-500'}`}
+                          />
+                          {!collapsed && (
+                            <>
+                              <span className="flex-1 truncate">{item.label}</span>
+                              {item.badge !== undefined && (
+                                <span className={`badge text-[10px] ${badgeClass(item.badgeColor)}`}>
+                                  {item.badge}
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </NavLink>
+                      )}
                     </li>
                   );
                 })}
