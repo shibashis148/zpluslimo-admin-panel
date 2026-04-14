@@ -8,23 +8,17 @@ import {
 import { useAuth } from '../../context/AuthContext';
 
 const ROUTE_LABELS: Record<string, string> = {
-  '/dashboard':        'Dashboard',
-  '/analytics':        'Analytics',
-  '/drivers':          'Drivers',
-  '/cars':             'Cars',
-  '/users':            'Users',
-  '/tracking':         'Live Track',
-  '/shift':            'Shift',
-  '/reports':          'Reports',
-  '/reports/trips':    'Trip Reports',
-  '/reports/drivers':  'Driver Reports',
-  '/reports/finance':  'Finance Reports',
-  '/reports/fines':    'Fine Reports',
-  '/reports/incentive':'Incentive Reports',
-  '/reports/expenses': 'Driver Expenses',
-  '/integrations':     'Integrations',
-  '/notifications':    'Notifications',
-  '/settings':         'Settings',
+  '/dashboard':          'Dashboard',
+  '/live-operations':    'Live Operations',
+  '/alerts':             'Alerts Center',
+  '/driver-performance': 'Driver Performance',
+  '/revenue':            'Revenue & Profitability',
+  '/leakage':            'Leakage & Fraud Detection',
+  '/fleet-health':       'Fleet Health',
+  '/drivers':            'Drivers',
+  '/cars':               'Cars',
+  '/integrations':       'Integrations',
+  '/settings':           'Settings',
 };
 
 interface TopbarProps {

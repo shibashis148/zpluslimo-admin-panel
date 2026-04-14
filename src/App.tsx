@@ -8,20 +8,14 @@ import IntegrationsPage from './pages/IntegrationsPage';
 import ComingSoonPage from './pages/ComingSoonPage';
 
 const COMING_SOON_ROUTES = [
-  '/analytics',
+  '/live-operations',
+  '/alerts',
+  '/driver-performance',
+  '/revenue',
+  '/leakage',
+  '/fleet-health',
   '/drivers',
   '/cars',
-  '/users',
-  '/tracking',
-  '/shift',
-  '/reports',
-  '/reports/trips',
-  '/reports/drivers',
-  '/reports/finance',
-  '/reports/fines',
-  '/reports/incentive',
-  '/reports/expenses',
-  '/notifications',
   '/settings',
 ];
 
@@ -36,7 +30,7 @@ export default function App() {
           {/* Protected */}
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/dashboard"    element={<DashboardPage />} />
               <Route path="/integrations" element={<IntegrationsPage />} />
 
               {COMING_SOON_ROUTES.map((path) => (

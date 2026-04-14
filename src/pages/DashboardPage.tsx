@@ -8,6 +8,7 @@ import {
   ClockCountdown,
   ArrowsClockwise,
 } from '@phosphor-icons/react';
+import { BoltIcon, UberIcon, YangoIcon, CareemIcon } from '../assets/integrationIcons';
 
 // Dubai timezone formatter
 const dubaiTime = (date: Date = new Date()) =>
@@ -68,8 +69,9 @@ const STATS = [
 interface BookingRow {
   id: string;
   platform: string;
-  platformColor: string;
-  platformBg: string;
+  Icon: React.ComponentType<{ size?: number }>;
+  iconBg: string;
+  accentColor: string;
   total: number;
   completed: number;
   active: number;
@@ -82,8 +84,9 @@ const BOOKINGS: BookingRow[] = [
   {
     id: 'bolt',
     platform: 'Bolt',
-    platformColor: '#34D186',
-    platformBg: '#ECFDF5',
+    Icon: BoltIcon,
+    iconBg: '#ECFDF5',
+    accentColor: '#34D186',
     total: 247,
     completed: 198,
     active: 32,
@@ -94,8 +97,9 @@ const BOOKINGS: BookingRow[] = [
   {
     id: 'uber',
     platform: 'Uber',
-    platformColor: '#111827',
-    platformBg: '#F3F4F6',
+    Icon: UberIcon,
+    iconBg: '#F3F4F6',
+    accentColor: '#111827',
     total: 312,
     completed: 264,
     active: 38,
@@ -106,8 +110,9 @@ const BOOKINGS: BookingRow[] = [
   {
     id: 'yango',
     platform: 'YANGO',
-    platformColor: '#EF4444',
-    platformBg: '#FEF2F2',
+    Icon: YangoIcon,
+    iconBg: '#FEF2F2',
+    accentColor: '#FF0000',
     total: 189,
     completed: 144,
     active: 28,
@@ -118,8 +123,9 @@ const BOOKINGS: BookingRow[] = [
   {
     id: 'careem',
     platform: 'Careem',
-    platformColor: '#10B981',
-    platformBg: '#ECFDF5',
+    Icon: CareemIcon,
+    iconBg: '#F0FDF4',
+    accentColor: '#28bb4e',
     total: 143,
     completed: 109,
     active: 21,
@@ -221,16 +227,18 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {BOOKINGS.map((row) => (
+              {BOOKINGS.map((row) => {
+                const PlatformIcon = row.Icon;
+                return (
                 <tr key={row.id} className="lc-table-row">
                   {/* Platform */}
                   <td className="lc-table-cell">
                     <div className="flex items-center gap-2.5">
                       <div
-                        className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shadow-sm"
-                        style={{ backgroundColor: row.platformBg, color: row.platformColor, border: `1px solid ${row.platformColor}22` }}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0"
+                        style={{ backgroundColor: row.iconBg, border: `1px solid ${row.accentColor}20` }}
                       >
-                        {row.platform[0]}
+                        <PlatformIcon size={20} />
                       </div>
                       <span className="font-semibold text-slate-700">{row.platform}</span>
                     </div>
@@ -259,7 +267,8 @@ export default function DashboardPage() {
                     </span>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
 
               {/* Totals row */}
               <tr className="bg-slate-50 border-t-2 border-slate-200">
@@ -332,7 +341,7 @@ export default function DashboardPage() {
               <div
                 key={b.id}
                 className="h-full rounded-sm"
-                style={{ width: `${(b.total / totalBookings) * 100}%`, backgroundColor: b.platformColor }}
+                style={{ width: `${(b.total / totalBookings) * 100}%`, backgroundColor: b.accentColor }}
               />
             ))}
           </div>
@@ -342,7 +351,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2">
                   <span
                     className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: b.platformColor }}
+                    style={{ backgroundColor: b.accentColor }}
                   />
                   <span className="text-sm text-slate-600">{b.platform}</span>
                 </div>
