@@ -5,19 +5,13 @@ import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import IntegrationsPage from './pages/IntegrationsPage';
+import LiveOperationsPage from './pages/LiveOperationsPage';
+import DriverPerformancePage from './pages/DriverPerformancePage';
+import RevenuePage from './pages/RevenuePage';
+import LeakagePage from './pages/LeakagePage';
+import AlertsCenterPage from './pages/AlertsCenterPage';
+import FleetHealthPage from './pages/FleetHealthPage';
 import ComingSoonPage from './pages/ComingSoonPage';
-
-const COMING_SOON_ROUTES = [
-  '/live-operations',
-  '/alerts',
-  '/driver-performance',
-  '/revenue',
-  '/leakage',
-  '/fleet-health',
-  '/drivers',
-  '/cars',
-  '/settings',
-];
 
 export default function App() {
   return (
@@ -30,12 +24,17 @@ export default function App() {
           {/* Protected */}
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
-              <Route path="/dashboard"    element={<DashboardPage />} />
-              <Route path="/integrations" element={<IntegrationsPage />} />
-
-              {COMING_SOON_ROUTES.map((path) => (
-                <Route key={path} path={path} element={<ComingSoonPage />} />
-              ))}
+              <Route path="/dashboard"          element={<DashboardPage />} />
+              <Route path="/live-operations"    element={<LiveOperationsPage />} />
+              <Route path="/driver-performance" element={<DriverPerformancePage />} />
+              <Route path="/revenue"            element={<RevenuePage />} />
+              <Route path="/leakage"            element={<LeakagePage />} />
+              <Route path="/alerts"             element={<AlertsCenterPage />} />
+              <Route path="/fleet-health"       element={<FleetHealthPage />} />
+              <Route path="/integrations"       element={<IntegrationsPage />} />
+              <Route path="/drivers"            element={<ComingSoonPage />} />
+              <Route path="/cars"               element={<ComingSoonPage />} />
+              <Route path="/settings"           element={<ComingSoonPage />} />
             </Route>
           </Route>
 

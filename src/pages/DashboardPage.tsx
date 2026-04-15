@@ -1,372 +1,217 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  CarProfile,
-  Users,
-  CurrencyDollar,
-  ArrowUp,
-  ArrowDown,
-  IdentificationCard,
-  ClockCountdown,
-  ArrowsClockwise,
+  CarProfile, CurrencyDollar, Warning,
+  ShieldWarning, ArrowUp, ArrowDown, ClockCountdown, ArrowSquareOut,
 } from '@phosphor-icons/react';
+import { dashboardService, carService } from '../services';
 import { BoltIcon, UberIcon, YangoIcon, CareemIcon } from '../assets/integrationIcons';
+import { fmtCurrency, dubaiFullDateTime } from '../lib/dubai';
+import type { Car } from '../data/types';
 
-// Dubai timezone formatter
-const dubaiTime = (date: Date = new Date()) =>
-  date.toLocaleString('en-AE', {
-    timeZone: 'Asia/Dubai',
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
+const PLATFORM_ICONS: Record<string, React.ComponentType<{size?:number}>> = {
+  uber: UberIcon, bolt: BoltIcon, yango: YangoIcon, careem: CareemIcon,
+};
 
-const STATS = [
-  {
-    label: 'Total Vehicles',
-    value: '248',
-    change: '+4',
-    up: true,
-    sub: 'Active in fleet',
-    icon: CarProfile,
-    iconBg: 'bg-amber-50',
-    iconColor: 'text-amber-500',
-  },
-  {
-    label: 'Active Drivers',
-    value: '182',
-    change: '+9',
-    up: true,
-    sub: 'On shift today',
-    icon: IdentificationCard,
-    iconBg: 'bg-emerald-50',
-    iconColor: 'text-emerald-500',
-  },
-  {
-    label: 'Active Users',
-    value: '64',
-    change: '-3',
-    up: false,
-    sub: 'Logged in today',
-    icon: Users,
-    iconBg: 'bg-blue-50',
-    iconColor: 'text-blue-500',
-  },
-  {
-    label: "Today's Revenue",
-    value: 'AED 38,420',
-    change: '+12%',
-    up: true,
-    sub: 'vs last week',
-    icon: CurrencyDollar,
-    iconBg: 'bg-purple-50',
-    iconColor: 'text-purple-500',
-  },
-];
+const STATUS_STYLE: Record<string, { dot: string; badge: string; label: string }> = {
+  on_trip:     { dot: 'bg-blue-500',    badge: 'bg-blue-50 text-blue-700 border-blue-200',    label: 'On Trip'     },
+  waiting:     { dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: 'Waiting' },
+  break:       { dot: 'bg-amber-400',   badge: 'bg-amber-50 text-amber-700 border-amber-200', label: 'Break'       },
+  offline:     { dot: 'bg-gray-400',    badge: 'bg-gray-100 text-gray-500 border-gray-200',   label: 'Offline'     },
+  maintenance: { dot: 'bg-red-500',     badge: 'bg-red-50 text-red-700 border-red-200',       label: 'Maintenance' },
+};
 
-interface BookingRow {
-  id: string;
-  platform: string;
-  Icon: React.ComponentType<{ size?: number }>;
-  iconBg: string;
-  accentColor: string;
-  total: number;
-  completed: number;
-  active: number;
-  cancelled: number;
-  revenue: string;
-  lastSync: string;
-}
-
-const BOOKINGS: BookingRow[] = [
-  {
-    id: 'bolt',
-    platform: 'Bolt',
-    Icon: BoltIcon,
-    iconBg: '#ECFDF5',
-    accentColor: '#34D186',
-    total: 247,
-    completed: 198,
-    active: 32,
-    cancelled: 17,
-    revenue: 'AED 14,820',
-    lastSync: '2 min ago',
-  },
-  {
-    id: 'uber',
-    platform: 'Uber',
-    Icon: UberIcon,
-    iconBg: '#F3F4F6',
-    accentColor: '#111827',
-    total: 312,
-    completed: 264,
-    active: 38,
-    cancelled: 10,
-    revenue: 'AED 19,450',
-    lastSync: '5 min ago',
-  },
-  {
-    id: 'yango',
-    platform: 'YANGO',
-    Icon: YangoIcon,
-    iconBg: '#FEF2F2',
-    accentColor: '#FF0000',
-    total: 189,
-    completed: 144,
-    active: 28,
-    cancelled: 17,
-    revenue: 'AED 11,340',
-    lastSync: '1 min ago',
-  },
-  {
-    id: 'careem',
-    platform: 'Careem',
-    Icon: CareemIcon,
-    iconBg: '#F0FDF4',
-    accentColor: '#28bb4e',
-    total: 143,
-    completed: 109,
-    active: 21,
-    cancelled: 13,
-    revenue: 'AED 8,610',
-    lastSync: '8 min ago',
-  },
-];
-
-const SHIFT_SUMMARY = [
-  { label: 'On Shift',   count: 84,  color: 'bg-emerald-500', text: 'text-emerald-600' },
-  { label: 'Break',      count: 22,  color: 'bg-amber-400',   text: 'text-amber-600' },
-  { label: 'Off Shift',  count: 76,  color: 'bg-slate-300',   text: 'text-slate-500' },
-];
+const ALERT_ROW: Record<string, string> = {
+  normal:   '',
+  warning:  'bg-amber-50/60',
+  critical: 'bg-red-50/60',
+};
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+  const [kpis, setKpis] = useState<Awaited<ReturnType<typeof dashboardService.getKpis>> | null>(null);
+  const [cars, setCars] = useState<Car[]>([]);
+  const [loading, setLoading] = useState(true);
   const now = new Date();
-  const hour = now.toLocaleString('en-AE', { timeZone: 'Asia/Dubai', hour: 'numeric', hour12: false });
-  const h = parseInt(hour);
-  const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 
-  const totalBookings = BOOKINGS.reduce((s, b) => s + b.total, 0);
-  const totalCompleted = BOOKINGS.reduce((s, b) => s + b.completed, 0);
-  const totalActive = BOOKINGS.reduce((s, b) => s + b.active, 0);
-  const totalCancelled = BOOKINGS.reduce((s, b) => s + b.cancelled, 0);
+  useEffect(() => {
+    Promise.all([dashboardService.getKpis(), carService.getAll()])
+      .then(([k, c]) => { setKpis(k); setCars(c); })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const KPI_CARDS = kpis ? [
+    { label: 'Total Cars',              value: kpis.totalCars,              icon: CarProfile,       bg: 'bg-slate-100',   color: 'text-slate-600',   change: null },
+    { label: 'Active Cars',             value: kpis.activeCars,             icon: CarProfile,       bg: 'bg-emerald-50',  color: 'text-emerald-600', change: '+2' },
+    { label: 'Offline Cars',            value: kpis.offlineCars,            icon: CarProfile,       bg: 'bg-gray-100',    color: 'text-gray-500',    change: null },
+    { label: 'Cars on Trip',            value: kpis.carsOnTrip,             icon: CarProfile,       bg: 'bg-blue-50',     color: 'text-blue-600',    change: null },
+    { label: 'Cars Idle',               value: kpis.carsIdle,               icon: ClockCountdown,   bg: 'bg-amber-50',    color: 'text-amber-600',   change: '-1' },
+    { label: "Today's Revenue",         value: fmtCurrency(kpis.totalRevenueToday), icon: CurrencyDollar, bg: 'bg-purple-50', color: 'text-purple-600', change: '+8%' },
+    { label: 'Avg Revenue / Active Car',value: fmtCurrency(kpis.avgRevenuePerActiveCar), icon: CurrencyDollar, bg: 'bg-indigo-50', color: 'text-indigo-600', change: null },
+    { label: 'Est. Profit Today',       value: fmtCurrency(kpis.estimatedProfitToday), icon: CurrencyDollar, bg: 'bg-teal-50',  color: 'text-teal-600',  change: '+12%' },
+    { label: 'Drivers Flagged',         value: kpis.driversFlagged,         icon: Warning,          bg: 'bg-amber-50',    color: 'text-amber-600',   change: null },
+    { label: 'Suspicious Drivers',      value: kpis.suspiciousDrivers,      icon: ShieldWarning,    bg: 'bg-red-50',      color: 'text-red-600',     change: null },
+  ] : [];
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <svg className="animate-spin h-8 w-8 text-gold" viewBox="0 0 24 24" fill="none">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+      </svg>
+    </div>
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">
 
-      {/* ── Greeting banner ── */}
+      {/* ── Greeting ── */}
       <div className="lc-card p-5 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-gold/5 via-transparent to-transparent pointer-events-none rounded-2xl" />
+        <div className="absolute inset-0 bg-gradient-to-r from-gold/5 to-transparent pointer-events-none rounded-2xl" />
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <p className="text-slate-500 text-sm">{greeting}, Admin 👋</p>
-            <h2 className="font-display font-bold text-xl text-slate-800 mt-0.5">
-              Control Room &mdash; <span className="text-gradient-gold">{dubaiTime(now)}</span>
+            <p className="text-slate-500 text-sm">Control Room — Live Overview</p>
+            <h2 className="font-display font-bold text-xl text-slate-800 mt-0.5 text-gradient-gold">
+              {dubaiFullDateTime(now.toISOString())}
             </h2>
             <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-              <ClockCountdown size={13} className="text-gold" />
-              Dubai Time (GST, UTC+4)
+              <ClockCountdown size={13} className="text-gold" /> Dubai Time (GST, UTC+4)
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              All Systems Operational
-            </span>
-          </div>
+          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-semibold self-start sm:self-auto">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> All Systems Live
+          </span>
         </div>
       </div>
 
-      {/* ── KPI stats ── */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        {STATS.map((s) => {
-          const Icon = s.icon;
+      {/* ── 10 KPI cards ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+        {KPI_CARDS.map((k) => {
+          const Icon = k.icon;
           return (
-            <div key={s.label} className="lc-card p-5 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                <div className={`w-10 h-10 rounded-xl ${s.iconBg} flex items-center justify-center ${s.iconColor}`}>
-                  <Icon size={22} weight="duotone" />
+            <div key={k.label} className="lc-card p-4 hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between mb-3">
+                <div className={`w-9 h-9 rounded-xl ${k.bg} flex items-center justify-center ${k.color}`}>
+                  <Icon size={18} weight="duotone" />
                 </div>
-                <span className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full
-                  ${s.up ? 'text-emerald-600 bg-emerald-50' : 'text-red-500 bg-red-50'}`}>
-                  {s.up ? <ArrowUp size={11} weight="bold" /> : <ArrowDown size={11} weight="bold" />}
-                  {s.change}
-                </span>
+                {k.change && (
+                  <span className={`flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-full ${k.change.startsWith('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
+                    {k.change.startsWith('+') ? <ArrowUp size={10} weight="bold"/> : <ArrowDown size={10} weight="bold"/>}
+                    {k.change.replace(/[+-]/, '')}
+                  </span>
+                )}
               </div>
-              <p className="font-display font-bold text-2xl text-slate-800 mb-0.5">{s.value}</p>
-              <p className="text-sm font-medium text-slate-600">{s.label}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{s.sub}</p>
+              <p className="font-display font-bold text-xl text-slate-800 leading-none">{k.value}</p>
+              <p className="text-xs text-slate-500 mt-1 leading-tight">{k.label}</p>
             </div>
           );
         })}
       </div>
 
-      {/* ── Bookings from integrations table ── */}
+      {/* ── Live fleet status panel ── */}
       <div className="lc-card overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <div>
-            <h3 className="font-semibold text-slate-800 text-base">Bookings by Integration</h3>
-            <p className="text-slate-400 text-xs mt-0.5">
-              Live data from all connected aggregators — Dubai time
-            </p>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-white">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <h3 className="font-semibold text-slate-800">Live Fleet Status</h3>
           </div>
-          <button className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 transition-colors">
-            <ArrowsClockwise size={13} weight="bold" />
-            Sync now
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-4 text-xs text-slate-500">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block"/>On Trip</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>Waiting</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/>Break</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400 inline-block"/>Offline</span>
+            </div>
+            <button
+              onClick={() => navigate('/live-operations?view=table')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-sidebar text-gold border border-gold/30 hover:bg-gold/10 transition-colors"
+            >
+              <ArrowSquareOut size={13} weight="bold" />
+              View All
+            </button>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr>
-                {['Platform', 'Total', 'Completed', 'Active', 'Cancelled', 'Revenue', 'Last Sync'].map((h) => (
+                {['Car','Driver','Platform','Status','Revenue Today','Trips','Idle (min)','Last Activity','Zone','Alert'].map((h) => (
                   <th key={h} className="lc-table-header">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {BOOKINGS.map((row) => {
-                const PlatformIcon = row.Icon;
+              {cars.map((car) => {
+                const s = STATUS_STYLE[car.status] ?? STATUS_STYLE.offline;
+                const PIcon = PLATFORM_ICONS[car.platform];
+                const driver = car.driverId;
+                void driver;
                 return (
-                <tr key={row.id} className="lc-table-row">
-                  {/* Platform */}
-                  <td className="lc-table-cell">
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0"
-                        style={{ backgroundColor: row.iconBg, border: `1px solid ${row.accentColor}20` }}
-                      >
-                        <PlatformIcon size={20} />
+                  <tr key={car.id} className={`lc-table-row ${ALERT_ROW[car.alertStatus]}`}>
+                    <td className="lc-table-cell font-mono font-semibold text-slate-800 whitespace-nowrap">{car.plateNumber}</td>
+                    <td className="lc-table-cell whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-gold/60 to-gold-dark/60 flex items-center justify-center text-white font-bold text-[10px] shrink-0">
+                          {car.driverId.replace('DRV', '')}
+                        </div>
+                        <span className="text-slate-700 text-xs font-medium max-w-[110px] truncate">
+                          {/* driver name — resolved via driverId in real API */}
+                          {['Omar H.','Samir R.','Muhammad K.','Rajesh S.','Vikram C.','Ahmed A.','Faisal Z.','Ravi N.','Deepak V.','Jamal H.','Suresh P.','Babu T.','Zaid H.','Anil M.','Bilal H.'][parseInt(car.id.replace('CAR',''))-1]}
+                        </span>
                       </div>
-                      <span className="font-semibold text-slate-700">{row.platform}</span>
-                    </div>
-                  </td>
-                  {/* Total */}
-                  <td className="lc-table-cell font-semibold text-slate-800">{row.total}</td>
-                  {/* Completed */}
-                  <td className="lc-table-cell">
-                    <span className="lc-badge bg-emerald-50 text-emerald-600">{row.completed}</span>
-                  </td>
-                  {/* Active */}
-                  <td className="lc-table-cell">
-                    <span className="lc-badge bg-blue-50 text-blue-600">{row.active}</span>
-                  </td>
-                  {/* Cancelled */}
-                  <td className="lc-table-cell">
-                    <span className="lc-badge bg-red-50 text-red-500">{row.cancelled}</span>
-                  </td>
-                  {/* Revenue */}
-                  <td className="lc-table-cell font-semibold text-slate-800">{row.revenue}</td>
-                  {/* Last Sync */}
-                  <td className="lc-table-cell">
-                    <span className="flex items-center gap-1.5 text-slate-400 text-xs">
-                      <ArrowsClockwise size={12} />
-                      {row.lastSync}
-                    </span>
-                  </td>
-                </tr>
+                    </td>
+                    <td className="lc-table-cell">
+                      <div className="w-6 h-6 flex items-center justify-center">
+                        {PIcon && <PIcon size={18} />}
+                      </div>
+                    </td>
+                    <td className="lc-table-cell whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${s.badge}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                        {s.label}
+                      </span>
+                    </td>
+                    <td className="lc-table-cell font-semibold text-slate-800 whitespace-nowrap">AED {car.revenueToday}</td>
+                    <td className="lc-table-cell text-center">{car.tripsToday}</td>
+                    <td className="lc-table-cell text-center">
+                      <span className={car.idleMinutes > 45 ? 'text-red-500 font-semibold' : car.idleMinutes > 25 ? 'text-amber-600 font-semibold' : 'text-slate-600'}>
+                        {car.idleMinutes}
+                      </span>
+                    </td>
+                    <td className="lc-table-cell text-slate-400 text-xs whitespace-nowrap">
+                      {new Date(car.lastActivity).toLocaleTimeString('en-AE', { timeZone:'Asia/Dubai', hour:'2-digit', minute:'2-digit', hour12:true })}
+                    </td>
+                    <td className="lc-table-cell text-slate-500 text-xs whitespace-nowrap max-w-[120px] truncate">{car.currentZone}</td>
+                    <td className="lc-table-cell">
+                      {car.alertStatus === 'critical' && <span className="lc-badge bg-red-50 text-red-600 border border-red-200">⚠ Critical</span>}
+                      {car.alertStatus === 'warning'  && <span className="lc-badge bg-amber-50 text-amber-600 border border-amber-200">⚠ Warning</span>}
+                      {car.alertStatus === 'normal'   && <span className="text-emerald-500 text-xs">✓ OK</span>}
+                    </td>
+                  </tr>
                 );
               })}
-
-              {/* Totals row */}
-              <tr className="bg-slate-50 border-t-2 border-slate-200">
-                <td className="lc-table-cell font-bold text-slate-700">Total</td>
-                <td className="lc-table-cell font-bold text-slate-800">{totalBookings}</td>
-                <td className="lc-table-cell">
-                  <span className="lc-badge bg-emerald-50 text-emerald-700 font-bold">{totalCompleted}</span>
-                </td>
-                <td className="lc-table-cell">
-                  <span className="lc-badge bg-blue-50 text-blue-700 font-bold">{totalActive}</span>
-                </td>
-                <td className="lc-table-cell">
-                  <span className="lc-badge bg-red-50 text-red-600 font-bold">{totalCancelled}</span>
-                </td>
-                <td className="lc-table-cell font-bold text-slate-800">AED 54,220</td>
-                <td className="lc-table-cell text-slate-400 text-xs">—</td>
-              </tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* ── Bottom row: Shift summary + Platform share ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-        {/* Driver shift status */}
-        <div className="lc-card p-5">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h3 className="font-semibold text-slate-800">Driver Shift Status</h3>
-              <p className="text-xs text-slate-400 mt-0.5">182 drivers total today</p>
-            </div>
-          </div>
-          {/* Bar */}
-          <div className="flex h-2.5 rounded-full overflow-hidden gap-0.5 mb-4">
-            {SHIFT_SUMMARY.map((s) => (
-              <div
-                key={s.label}
-                className={`${s.color} h-full`}
-                style={{ width: `${(s.count / 182) * 100}%` }}
-              />
-            ))}
-          </div>
-          <div className="space-y-3">
-            {SHIFT_SUMMARY.map((s) => (
-              <div key={s.label} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${s.color}`} />
-                  <span className="text-sm text-slate-600">{s.label}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className={`text-sm font-semibold ${s.text}`}>{s.count}</span>
-                  <span className="text-xs text-slate-400 w-8 text-right">
-                    {Math.round((s.count / 182) * 100)}%
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* ── Color legend ── */}
+      <div className="lc-card p-4">
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Operational Color System</p>
+        <div className="flex flex-wrap gap-4">
+          {[
+            { color: 'bg-emerald-100 border-emerald-300 text-emerald-700', label: '🟢  Green — Healthy / On track' },
+            { color: 'bg-amber-100 border-amber-300 text-amber-700',   label: '🟡  Yellow — Below expected / Monitor' },
+            { color: 'bg-red-100 border-red-300 text-red-700',         label: '🔴  Red — Action required' },
+          ].map((c) => (
+            <span key={c.label} className={`text-xs font-medium px-3 py-1.5 rounded-full border ${c.color}`}>
+              {c.label}
+            </span>
+          ))}
         </div>
-
-        {/* Booking share by platform */}
-        <div className="lc-card p-5">
-          <div className="mb-5">
-            <h3 className="font-semibold text-slate-800">Booking Share by Platform</h3>
-            <p className="text-xs text-slate-400 mt-0.5">{totalBookings} total bookings today</p>
-          </div>
-          <div className="flex h-2.5 rounded-full overflow-hidden gap-0.5 mb-4">
-            {BOOKINGS.map((b) => (
-              <div
-                key={b.id}
-                className="h-full rounded-sm"
-                style={{ width: `${(b.total / totalBookings) * 100}%`, backgroundColor: b.accentColor }}
-              />
-            ))}
-          </div>
-          <div className="space-y-3">
-            {BOOKINGS.map((b) => (
-              <div key={b.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: b.accentColor }}
-                  />
-                  <span className="text-sm text-slate-600">{b.platform}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-slate-700">{b.total}</span>
-                  <span className="text-xs text-slate-400 w-8 text-right">
-                    {Math.round((b.total / totalBookings) * 100)}%
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
       </div>
+
     </div>
   );
 }
